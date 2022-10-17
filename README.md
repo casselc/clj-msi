@@ -12,7 +12,7 @@ The compiled package will be located at `out\clojure-<currentclojureversion>.msi
 
 Double-click the resulting MSI file, or run `msiexec.exe /i out\clojure-x.x.xx.msi` from a command prompt or PowerShell session, or `msiexec.exe /i out\clojure-x.x.xx.msi /qn` for a silent installation. In PowerShell, be careful of the shell automatically changing the path from `out\clojure-x.x.xxx.msi` to `.\out\clojure-x.x.xxx.msi`, the latter format will cause `msiexec` to throw an error.
 
-Currently the installer defaults to `%LOCALAPPDATA%\Apps\clojure` or `%ProgramFiles%\clojure` depending on whether you select a per-user or per-machine installation, and the installation directory can be changed by using the Advanced option during installation. 
+Currently the installer defaults to `%LOCALAPPDATA%\Apps\clojure` or `%ProgramFiles%\clojure` depending on whether you select a per-user or per-machine installation, and the installation directory can be changed by using the Advanced option during installation, or at the command line by settingsthe `APPLICATIONFOLDER` property, e.g. `msiexec.exe /i out\clojure-x.x.xx.msi /qn APPLICATIONFOLDER=C:\somewhere\else\clojure`
 
 ## How to uninstall
 
