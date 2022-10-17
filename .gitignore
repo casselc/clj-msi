@@ -1,3 +1,6 @@
 wix_bin
 files
 out
+*.wixobj
+*.wixpdb
+*.msi

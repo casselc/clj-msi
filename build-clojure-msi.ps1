@@ -95,16 +95,17 @@ Remove-Item -Path files, out -Force -Recurse -ErrorAction SilentlyContinue
 
 $launcherVersion = Get-LauncherVersion
 $runtimeVersion = Get-RuntimeVersion
+$buildDir = Get-Location | Join-Path -ChildPath files
 
 $params = @{
     Version     = $launcherVersion
-    Destination = "files"
+    Destination = "$buildDir\launcher"
 }
 Copy-Launcher @params
 
 $params = @{
     Version     = $runtimeVersion
-    Destination = "files"
+    Destination = "$buildDir\runtime"
 }
 Copy-Runtime @params
 
@@ -113,6 +114,6 @@ if (-not $(Test-Path -Path wix_bin)) {
 }
 
 Write-Information "Creating new MSI at $(Get-Location | Join-Path -ChildPath "out\clojure-$runtimeVersion.msi")"
-.\wix_bin\candle.exe .\installers\combined.wxs -o out\combined.wixobj -nologo
-.\wix_bin\light.exe -b .\files "-dRuntimeVersion=$runtimeVersion" "-dLauncherVersion=$launcherVersion" out\combined.wixobj -o "out\clojure-$runtimeVersion.msi" -spdb -dcl:high -nologo
+.\wix_bin\candle.exe .\installers\combined-permachine.wxs -o out\clojure.wixobj -nologo
+.\wix_bin\light.exe -b files -b resources  -ext WixUIExtension "-cultures:en-us" "-dRuntimeVersion=$runtimeVersion" "-dLauncherVersion=$launcherVersion" out\clojure.wixobj -o "out\clojure-$runtimeVersion.msi" -spdb -dcl:high -nologo
 Write-Information "Done"
