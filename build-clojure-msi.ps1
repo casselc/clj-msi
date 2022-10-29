@@ -1,4 +1,7 @@
+param([string] $WixDirectory = 'wix_bin', [string] $DownloadDirectory = 'files', [string] $WorkDirectory = 'work', [switch] $OnlyBuild) 
+
 $InformationPreference = 'Continue'
+[Environment]::CurrentDirectory = (Get-Location -PSProvider FileSystem).ProviderPath
 
 
 
@@ -12,12 +15,10 @@ function Get-LauncherVersion() {
 
 function Get-RuntimeVersion() {
     $params = @{
-        Uri     = 'https://api.github.com/repos/clojure/homebrew-tools/commits?author=clojure-build'
-        Headers = @{Accept = 'application/vnd.github+json' }
-        Method  = 'Get'
+        Uri    = 'https://download.clojure.org/install/stable.properties'
+        Method = 'Get'
     }
-    # lol
-    $(Invoke-RestMethod @params).Where({ $PSItem.commit.message.StartsWith('Promote') }, 'First', 1).commit.message.Split()[1]
+    $(Invoke-RestMethod @params).Split()[0]
 }
 
 function Expand-WebArchive {
@@ -40,7 +41,7 @@ function Expand-WebArchive {
 function Copy-Launcher {
     param(
         [string] $Version = $(Get-LauncherVersion),
-        [string] $Destination = $(Get-Location).Path
+        [string] $Destination = $(Get-Location -PSProvider FileSystem).ProviderPath
     )
 
     $params = @{
@@ -55,7 +56,7 @@ function Copy-Launcher {
 function Copy-Runtime {
     param(
         [string] $Version = $(Get-RuntimeVersion),
-        [string] $Destination = $(Get-Location).Path
+        [string] $Destination = $(Get-Location -PSProvider FileSystem).ProviderPath
     )
 
     $params = @{
@@ -71,7 +72,7 @@ function Copy-Runtime {
 
 function Copy-WixBinaries {
     param(
-        [string] $Destination = $(Get-Location).Path
+        [string] $Destination = $(Get-Location -PSProvider FileSystem).ProviderPath
     )
         
     $params = @{
@@ -91,29 +92,31 @@ function Copy-WixBinaries {
     Expand-WebArchive @params
 }
 
-Remove-Item -Path files, out -Force -Recurse -ErrorAction SilentlyContinue
-
 $launcherVersion = Get-LauncherVersion
 $runtimeVersion = Get-RuntimeVersion
-$buildDir = Get-Location | Join-Path -ChildPath files
+$packageVersion = $runtimeVersion.Substring(2)
 
-$params = @{
-    Version     = $launcherVersion
-    Destination = "$buildDir\launcher"
+if (-not $OnlyBuild) {
+    Remove-Item -Path $DownloadDirectory -Force -Recurse -ErrorAction SilentlyContinue
+
+    $params = @{
+        Version     = $launcherVersion
+        Destination = $DownloadDirectory
+    }
+    Copy-Launcher @params
+
+    $params = @{
+        Version     = $runtimeVersion
+        Destination = $DownloadDirectory
+    }
+    Copy-Runtime @params
+
+    if (-not $(Test-Path -Path $WixDirectory)) {
+        Copy-WixBinaries -Destination $WixDirectory
+    }
 }
-Copy-Launcher @params
 
-$params = @{
-    Version     = $runtimeVersion
-    Destination = "$buildDir\runtime"
-}
-Copy-Runtime @params
-
-if (-not $(Test-Path -Path wix_bin)) {
-    Copy-WixBinaries -Destination wix_bin
-}
-
-Write-Information "Creating new MSI at $(Get-Location | Join-Path -ChildPath "out\clojure-$runtimeVersion.msi")"
-.\wix_bin\candle.exe .\installers\combined-permachine.wxs -o out\clojure.wixobj -nologo
-.\wix_bin\light.exe -b files -b resources  -ext WixUIExtension "-cultures:en-us" "-dRuntimeVersion=$runtimeVersion" "-dLauncherVersion=$launcherVersion" out\clojure.wixobj -o "out\clojure-$runtimeVersion.msi" -spdb -dcl:high -nologo
+Write-Information "Creating new MSI at $(Join-Path -Path $(Get-Location -PSProvider FileSystem).ProviderPath -ChildPath "clojure-$packageVersion.msi")"
+.\wix_bin\candle.exe .\installers\combined-permachine.wxs -o "$WorkDirectory\clojure.wixobj" -nologo
+.\wix_bin\light.exe -b files -b resources -ext WixUIExtension "-cultures:en-us" "-dRuntimeVersion=$runtimeVersion" "-dPackageVersion=$packageVersion" "$WorkDirectory\clojure.wixobj" -o "clojure-$runtimeVersion.msi" -spdb -dcl:high -nologo
 Write-Information "Done"
