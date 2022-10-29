@@ -1,45 +1,40 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-    <Product Id="19ae9811-c83e-4a5b-a51a-3df2befa8745" Language="1033" Manufacturer="maybe Cognitect, Inc. one day" Name="Clojure for Windows" UpgradeCode="72156cf6-3ae4-4f58-b4b7-6b9de9a6c576" Version="!(wix.RuntimeVersion)">
+    <Product Id="dba54aa6-67e1-48f7-97b4-482d6a57106a" Language="1033" Manufacturer="maybe Cognitect, Inc. one day" Name="Clojure for Windows" UpgradeCode="72156cf6-3ae4-4f58-b4b7-6b9de9a6c576" Version="!(wix.PackageVersion)">
         <Package Compressed="yes" InstallerVersion="200" Description="A proof-of-concept installer for a Clojure launcher using deps.exe" Platform="x64"/>
         <Icon Id="clojure.ico" SourceFile="clojure.ico"/>
+        <MajorUpgrade AllowDowngrades="yes" Schedule="afterInstallValidate"/>
         <Directory Id="TARGETDIR" Name="SourceDir">
             <Directory Id="ProgramFilesFolder" Name="PFiles">
                 <Directory Id="APPLICATIONFOLDER" Name="clojure">
                     <Component Id="UserEnv" KeyPath="yes" Guid="66f8414f-bc4c-4827-ad51-aa3207fa4162">
                         <Condition>ALLUSERS=2 OR MSIINSTALLPERUSER=1</Condition>
-                        <Environment Id="ToolsDirUser" Name="DEPS_CLJ_TOOLS_DIR" Value="[RuntimeVersion]" Action="set" Part="all"/>
-                        <Environment Id="LauncherPATHEntryUser" Name="PATH" Value="[LauncherVersion]" Action="set" Part="last"/>
+                        <Environment Id="ToolsDirUser" Name="DEPS_CLJ_TOOLS_DIR" Value="[APPLICATIONFOLDER]" Action="set" Part="all"/>
+                        <Environment Id="LauncherPATHEntryUser" Name="PATH" Value="[APPLICATIONFOLDER]" Action="set" Part="last"/>
                     </Component>
                     <Component Id="MachineEnv" KeyPath="yes" Guid="626c79e7-cb01-448b-a882-796573c16d1c">
                         <Condition>MSIINSTALLPERUSER=""</Condition>
-                        <Environment Id="ToolsDirMachine" Name="DEPS_CLJ_TOOLS_DIR" Value="[RuntimeVersion]" Action="set" Part="all" System="yes" />
-                        <Environment Id="LauncherPATHEntryMachine" Name="PATH" Value="[LauncherVersion]" Action="set" Part="last" System="yes"/>
+                        <Environment Id="ToolsDirMachine" Name="DEPS_CLJ_TOOLS_DIR" Value="[APPLICATIONFOLDER]" Action="set" Part="all" System="yes" />
+                        <Environment Id="LauncherPATHEntryMachine" Name="PATH" Value="[APPLICATIONFOLDER]" Action="set" Part="last" System="yes"/>
                     </Component>
-                    <Directory Id="LauncherRoot" Name="launcher">
-                        <Directory Id="LauncherVersion" Name="!(wix.LauncherVersion)">
-                            <Component Id="ClojureLauncher" Guid="9cb9acee-06af-4e12-af89-d5ef3c3e992e">
-                                <File Id="clojure.exe" DiskId="1" Source="launcher\deps.exe" Name="clojure.exe" KeyPath="yes"/>
-                                <File Id="clj.exe" DiskId="1" Source="launcher\deps.exe" Name="clj.exe" CompanionFile="clojure.exe"/>
-                                <RemoveFolder Id='LauncherVersion' On='uninstall' />
-                            </Component>
-                        </Directory>
-                    </Directory>
-                    <Directory Id="RuntimeRoot" Name="runtime">
-                        <Directory Id="RuntimeVersion" Name="!(wix.RuntimeVersion)">
-                            <Component Id="ClojureRuntime" Guid="9e1e4abe-a75f-4b2b-a9a7-22708040d096">
-                                <File Id="tools.jar" DiskId="1" Source="runtime\clojure-tools-!(wix.RuntimeVersion).jar" KeyPath="yes"/>
-                                <File Id="exec.jar" DiskId="1" Source="runtime\exec.jar" CompanionFile="tools.jar"/>
-                                <File Id="deps.edn" DiskId="1" Source="runtime\deps.edn" CompanionFile="tools.jar"/>
-                                <File Id="tools.edn" DiskId="1" Source="runtime\tools.edn" CompanionFile="tools.jar"/>
-                                <File Id="exampledeps.edn" DiskId="1" Source="runtime\example-deps.edn" CompanionFile="tools.jar"/>
-                                <RemoveFolder Id="RuntimeVersion" On="uninstall" />
-                            </Component>
-                        </Directory>
-                    </Directory>
+                    <Component Id="ClojureLauncher" Guid="9cb9acee-06af-4e12-af89-d5ef3c3e992e">
+                        <File Id="clojure.exe" DiskId="1" Source="deps.exe" Name="clojure.exe" KeyPath="yes"/>
+                        <File Id="clj.exe" DiskId="1" Source="deps.exe" Name="clj.exe" CompanionFile="clojure.exe"/>
+                        <RemoveFolder Id='ApplicationFolder' On='uninstall' />
+                    </Component>
+                    <Component Id="ClojureRuntime" Guid="9e1e4abe-a75f-4b2b-a9a7-22708040d096">
+                        <File Id="tools.jar" DiskId="1" Source="clojure-tools-!(wix.RuntimeVersion).jar" KeyPath="yes"/>
+                        <File Id="exec.jar" DiskId="1" Source="exec.jar" CompanionFile="tools.jar"/>
+                        <File Id="deps.edn" DiskId="1" Source="deps.edn" CompanionFile="tools.jar"/>
+                        <File Id="tools.edn" DiskId="1" Source="tools.edn" CompanionFile="tools.jar"/>
+                        <File Id="exampledeps.edn" DiskId="1" Source="example-deps.edn" CompanionFile="tools.jar"/>
+                    </Component>
                 </Directory>
             </Directory>
         </Directory>
+        <Binary Id="custom_actions.vbs" SourceFile="custom_actions.vbs" />
+        <CustomAction Id="CheckInstallEnvironment" Impersonate="yes" BinaryKey="custom_actions.vbs" VBScriptCall="Run_All"/>
+
         <Feature Id="Binaries" Level="1" Title="Clojure binaries" Description="Installs the latest deps.exe and ClojureTools">
             <ComponentRef Id="ClojureLauncher" />
             <ComponentRef Id="ClojureRuntime" />
@@ -51,34 +46,14 @@
 
         <Media Id="1" Cabinet="product.cab" EmbedCab="yes" />
 
-        <Property Id="USERCLOJURE">
-            <DirectorySearch Id="SearchUser" Path="[PersonalFolder]\PowerShell\Modules">
-                <DirectorySearch Id="ClojureTools1" Path="ClojureTools" AssignToProperty="yes">
-                    <FileSearch Id="ClojureToolsPsd1" Name="ClojureTools.psd1" />
-                </DirectorySearch>
-            </DirectorySearch>
-        </Property>
-
-        <Property Id="PFCLOJURE">
-            <DirectorySearch Id="SearchProgs" Path="[ProgramFilesFolder]">
-                <DirectorySearch Id="ClojureTools2" Path="ClojureTools" AssignToProperty="yes" Depth="3">
-                    <FileSearch Id="ClojureToolsPsd2" Name="ClojureTools.psd1" />
-                </DirectorySearch>
-            </DirectorySearch>
-        </Property>
-
-        <Property Id="SYSCLOJURE">
-            <DirectorySearch Id="SearchSys" Path="[SystemFolder]\WindowsPowerShell\v1.0\Modules">
-                <DirectorySearch Id="ClojureTools3" Path="ClojureTools" AssignToProperty="yes">
-                    <FileSearch Id="ClojureToolsPsd3" Name="ClojureTools.psd1" />
-                </DirectorySearch>
-            </DirectorySearch>
-        </Property>
+        <Property Id="JAVAINSTALLED" Value="No" />
+        <Property Id="PSMODULEINSTALLED" Value="No"/>
+        <Property Id="ACTIVETERMINALS" Value="No" />
 
         <WixVariable Id="WixUILicenseRtf" Value="epl-1.0.rtf" />
         <WixVariable Id="WixUIBannerBmp" Value="banner.bmp"/>
         <WixVariable Id="WixUIDialogBmp" Value="dialog.bmp"/>
-        <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="Thank you for installing Clojure. Please restart any active terminal sessions to allow environment variables modified by the installation to take effect." />
+        <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="Thank you for installing Clojure." />
         <Property Id="ARPPRODUCTICON" Value="clojure.ico" />
 
         <Property Id="ApplicationFolderName" Value="clojure" />
@@ -86,22 +61,55 @@
 
         <Property Id="MSIINSTALLPERUSER" Value="1" />
         <Property Id="ALLUSERS" Value="2" />
+        <InstallUISequence>
+            <Custom Action='CheckInstallEnvironment' After='LaunchConditions'/>
+        </InstallUISequence>
         <UI>
-            <Dialog Id="PSWarningDlg" Width="284" Height="100" Title="PowerShell Module Detected" NoMinimize="yes">
-                <Control Id="Text" Type="Text" X="8" Y="4" Width="240" Height="73" TabSkip="no">
-                    <Text>An instance of the ClojureTools PowerShell module was detected:
-[USERCLOJURE]
-[PFCLOJURE]
-[SYSCLOJURE]
-Please remove it manually.</Text>
+            <Dialog Id="TerminalWarningDlg" Width="320" Height="120" Title="Active Terminals Detected" NoMinimize="yes">
+                <Control Id="Text" Type="Text" X="10" Y="4" Width="300" Height="73" TabSkip="no">
+                    <Text>The installer detected active terminal sessions which will not see any changes made to environment variables made by this installer.
+                    
+Please fully exit and restart any active terminal sessions.</Text>
                 </Control>
-                <Control Id="OK" Type="PushButton" X="114" Y="80" Width="56" Height="17" Default="yes" Cancel="yes" Text="OK">
+                <Control Id="OK" Type="PushButton" X="135" Y="90" Width="56" Height="17" Default="yes" Cancel="yes" Text="OK">
                     <Publish Event="EndDialog" Value="Return">1</Publish>
                 </Control>
             </Dialog>
+            <Dialog Id="PSWarningDlg" Width="320" Height="120" Title="PowerShell Module Detected" NoMinimize="yes">
+                <Control Id="Text" Type="Text" X="8" Y="4" Width="304" Height="70" TabSkip="no">
+                    <Text>An instance of the ClojureTools PowerShell module was detected at:
+[PSMODULEINSTALLED]
+
+
+Please remove it by closing any active PowerShell sessions and deleting the ClojureTools folder from this location.</Text>
+                </Control>
+                <Control Id="OK" Type="PushButton" X="135" Y="90" Width="56" Height="17" Default="yes" Cancel="yes" Text="OK">
+                    <Publish Event="EndDialog" Value="Return">1</Publish>
+                </Control>
+            </Dialog>
+            <Dialog Id="JavaWarningDlg" Width="320" Height="120" Title="Java is Required" NoMinimize="yes">
+                <Control Id="Text" Type="Text" X="8" Y="4" Width="304" Height="50" TabSkip="no">
+                    <Text>Java was not detected. Please install Java, or ensure PATH or JAVA_HOME are set appropriately.
+
+If you don't have an existing Java installation, we recommend Adoptium Temurin 17.</Text>
+                </Control>
+                <Control Id="DownloadLink" Type="Hyperlink" X="120" Y="70" Width="100" Height="10">
+                    <Text><![CDATA[<a href="http://www.adoptium.com/">https://adoptium.net/</a>]]></Text>
+                </Control>
+                <Control Id="OK" Type="PushButton" X="135" Y="90" Width="56" Height="17" Default="yes" Cancel="yes" Text="OK">
+                    <Publish Event="EndDialog" Value="Return">1</Publish>
+                </Control>
+            </Dialog>
+
             <InstallUISequence>
-                <Show Dialog="PSWarningDlg" After="AppSearch">
-                    <![CDATA[USERCLOJURE OR PFCLOJURE OR SYSCLOJURE]]>
+                <Show Dialog="JavaWarningDlg" After="ExecuteAction">
+                    <![CDATA[JAVAINSTALLED <> "Yes"]]>
+                </Show>
+                <Show Dialog="PSWarningDlg" After="ExecuteAction">
+                    <![CDATA[PSMODULEINSTALLED <> "No"]]>
+                </Show>
+                <Show Dialog="TerminalWarningDlg" After="ExecuteAction">
+                    <![CDATA[ACTIVETERMINALS = "Yes"]]>
                 </Show>
             </InstallUISequence>
 
