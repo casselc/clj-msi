@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-    <Product Id="dba54aa6-67e1-48f7-97b4-482d6a57106a" Language="1033" Manufacturer="maybe Cognitect, Inc. one day" Name="Clojure for Windows" UpgradeCode="72156cf6-3ae4-4f58-b4b7-6b9de9a6c576" Version="!(wix.PackageVersion)">
+    <Product Id="*" Language="1033" Manufacturer="maybe Cognitect, Inc. one day" Name="Clojure for Windows" UpgradeCode="72156cf6-3ae4-4f58-b4b7-6b9de9a6c576" Version="!(wix.PackageVersion)">
         <Package Compressed="yes" InstallerVersion="200" Description="A proof-of-concept installer for a Clojure launcher using deps.exe" Platform="x64"/>
         <Icon Id="clojure.ico" SourceFile="clojure.ico"/>
         <MajorUpgrade AllowDowngrades="yes" Schedule="afterInstallValidate"/>
@@ -10,12 +10,14 @@
                     <Component Id="UserEnv" KeyPath="yes" Guid="66f8414f-bc4c-4827-ad51-aa3207fa4162">
                         <Condition>ALLUSERS=2 OR MSIINSTALLPERUSER=1</Condition>
                         <Environment Id="ToolsDirUser" Name="DEPS_CLJ_TOOLS_DIR" Value="[APPLICATIONFOLDER]" Action="set" Part="all"/>
+                        <Environment Id="ToolsVerUser" Name="DEPS_CLJ_TOOLS_VERSION" Value="!(wix.ClojureVersion)" Action="set" Part="all" />
                         <Environment Id="LauncherPATHEntryUser" Name="PATH" Value="[APPLICATIONFOLDER]" Action="set" Part="last"/>
                     </Component>
                     <Component Id="MachineEnv" KeyPath="yes" Guid="626c79e7-cb01-448b-a882-796573c16d1c">
                         <Condition>MSIINSTALLPERUSER=""</Condition>
                         <Environment Id="ToolsDirMachine" Name="DEPS_CLJ_TOOLS_DIR" Value="[APPLICATIONFOLDER]" Action="set" Part="all" System="yes" />
                         <Environment Id="LauncherPATHEntryMachine" Name="PATH" Value="[APPLICATIONFOLDER]" Action="set" Part="last" System="yes"/>
+                        <Environment Id="ToolsVerMachine" Name="DEPS_CLJ_TOOLS_VERSION" Value="!(wix.ClojureVersion)" Action="set" Part="all" />
                     </Component>
                     <Component Id="ClojureLauncher" Guid="9cb9acee-06af-4e12-af89-d5ef3c3e992e">
                         <File Id="clojure.exe" DiskId="1" Source="deps.exe" Name="clojure.exe" KeyPath="yes"/>
@@ -23,7 +25,7 @@
                         <RemoveFolder Id='ApplicationFolder' On='uninstall' />
                     </Component>
                     <Component Id="ClojureRuntime" Guid="9e1e4abe-a75f-4b2b-a9a7-22708040d096">
-                        <File Id="tools.jar" DiskId="1" Source="clojure-tools-!(wix.RuntimeVersion).jar" KeyPath="yes"/>
+                        <File Id="tools.jar" DiskId="1" Source="clojure-tools-!(wix.ClojureVersion).jar" KeyPath="yes"/>
                         <File Id="exec.jar" DiskId="1" Source="exec.jar" CompanionFile="tools.jar"/>
                         <File Id="deps.edn" DiskId="1" Source="deps.edn" CompanionFile="tools.jar"/>
                         <File Id="tools.edn" DiskId="1" Source="tools.edn" CompanionFile="tools.jar"/>

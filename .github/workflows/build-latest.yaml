@@ -1,0 +1,24 @@
+name: Build and Publish Clojure MSI
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 * * * *"
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3         
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Package latest MSI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          . .\ci.ps1
+          Update-ClojureMSI
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: latest-installer
+          path: "*.msi"
