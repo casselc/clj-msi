@@ -190,7 +190,7 @@ function Publish-ClojureMSI {
         [switch] $Prerelease
     )
     Write-Information "Creating new release with tag $Tag"
-    $release = Invoke-GithubAPI -Method Post -RelativeUri '/repos/casselc/clj-msi/releases' -Body @{tag_name = $Tag ; name = "Clojure $Tag"; body = "Windows Installer package for Clojure version $Tag"; prerelease = $Prerelease.ToBool() }
+    $release = Invoke-GithubAPI -Method Post -RelativeUri '/repos/casselc/clj-msi/releases' -Body @{tag_name = $Tag ; name = "Clojure $Tag"; body = "Automated build of Windows Installer package for Clojure version $Tag"; prerelease = $Prerelease.ToBool(); draft = $true }
     $uploadUri = $release.upload_url -replace '\{.*\}', ''
     $uploadUri += "?name=$(Split-Path -Path $Path -Leaf)"
 
