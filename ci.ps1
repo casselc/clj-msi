@@ -130,7 +130,7 @@ function Get-MsiTags {
         $Latest
     )
 
-    $tags = $(Invoke-GithubAPI -Uri '/repos/casselc/clj-msi/tags').ForEach('name').Where({ $PSItem -imatch '^v?\d.+' })
+    $tags = $(Invoke-GithubAPI -Uri '/repos/casselc/clj-msi/tags').ForEach('name').Where({ $PSItem -imatch '^\d.+' })
 
     if ($Latest) {
         return $tags[0]
@@ -146,10 +146,10 @@ function Compare-LatestTags {
     $depsVersion = Get-DepsTags -Latest
 
     return  [PSCustomObject]@{
-        MSI        = $msiVersion
-        Clojure    = $cljVersion
-        Deps       = $depsVersion
-        UpToDate   = ($msiVersion.TrimStart('v') -eq $cljVersion)
+        MSI      = $msiVersion
+        Clojure  = $cljVersion
+        Deps     = $depsVersion
+        UpToDate = ($msiVersion -eq $cljVersion)
         Prerelease = ($stableVersion -ne $cljVersion)
     } 
 }
@@ -177,7 +177,7 @@ function Build-ClojureMSI {
     .\wix_bin\light.exe -b files -b resources -ext WixUIExtension "-cultures:en-us" "-dClojureVersion=$clojureVersion" "-dPackageVersion=$packageVersion" clojure.wixobj -o $filename -spdb -dcl:high -nologo
 
     if ($Publish) {
-        Publish-ClojureMSI -Path $filename -Version $ClojureVersion -Prerelease:$Prerelease
+        Publish-ClojureMSI -Path $filename -Tag $ClojureVersion -Prerelease:$Prerelease
     }
 }
 
@@ -186,24 +186,11 @@ function Publish-ClojureMSI {
     param (
         [Parameter(Mandatory)]
         [string] $Path,
-        [string] $Version,
+        [string] $Tag,
         [switch] $Prerelease
     )
-    $tag = "v$Version"
-    Write-Information "Checking for existing release with tag $tag"
-    $release = Invoke-GithubAPI -RelativeUri "/repos/casselc/clj-msi/releases/tags/$tag" -ErrorAction SilentlyContinue -ErrorVariable ghError
-
-    if ($ghError) {
-        Write-Error $ghError
-        Exit 1
-    }
-
-    if (-not $release) {
-        $release = Invoke-GithubAPI -Method Post -RelativeUri '/repos/casselc/clj-msi/releases' -Body @{tag_name = $tag ; name = "Clojure $Version"; body = "Automated build of Windows Installer package for Clojure version $Version"; prerelease = $Prerelease.ToBool(); draft = $true }
-    }
-
-
-    
+    Write-Information "Creating new release with tag $Tag"
+    $release = Invoke-GithubAPI -Method Post -RelativeUri '/repos/casselc/clj-msi/releases' -Body @{tag_name = $Tag ; name = "Clojure $Tag"; body = "Automated build of Windows Installer package for Clojure version $Tag"; prerelease = $Prerelease.ToBool(); draft = $true }
     $uploadUri = $release.upload_url -replace '\{.*\}', ''
     $uploadUri += "?name=$(Split-Path -Path $Path -Leaf)"
 
@@ -244,16 +231,12 @@ function Copy-ClojureTools {
 function Update-ClojureMSI {
     $status = Compare-LatestTags
     if (-not $status.UpToDate) {
-        $tags = @(Get-MsiTags).Where({ $PSItem -match "v?$($status.Clojure)" }, 'First', 1)
+        $tags = @(Get-MsiTags).Where({$PSItem -eq $status.Clojure}, 'First', 1)
         if ($tags.Count -eq 0) {
-            Build-ClojureMSI -Publish
-            
-        }
-        else {
+            Build-ClojureMSI -Publish -Prerelease:$status.Prerelease
+        } else {
             Write-Information "Found matching pre-existing tag"
         }
     }
-    else {
-        Write-Information "Most recent version has already been published"
-    }
+    Write-Information "Most recent version has already been published"
 }
