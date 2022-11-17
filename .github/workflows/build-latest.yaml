@@ -2,7 +2,7 @@ name: Build and Publish Clojure MSI
 on:
   workflow_dispatch:
   schedule:
-    - cron: "2/20 * * * *"
+    - cron: "0 * * * *"
 jobs:
   build:
     runs-on: windows-latest
