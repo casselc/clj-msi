@@ -17,8 +17,8 @@ jobs:
         run: |
           . .\ci.ps1
           Update-ClojureMSI
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: latest-installer
-          path: "*.msi"
+#      - name: Upload artifact
+#        uses: actions/upload-artifact@v3
+#        with:
+#          name: latest-installer
+#          path: "*.msi"
