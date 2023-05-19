@@ -15,10 +15,5 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
         run: |
-          . .\ci.ps1
-          Update-ClojureMSI
-#      - name: Upload artifact
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: latest-installer
-#          path: "*.msi"
+          .\ci.ps1
+          

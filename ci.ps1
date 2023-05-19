@@ -18,15 +18,6 @@ function Expand-WebArchive {
         $true
     )
 }
-
-function Get-ClojureVersion {
-    $params = @{
-        Uri    = 'https://download.clojure.org/install/stable.properties'
-        Method = 'Get'
-    }
-    $(Invoke-RestMethod @params).Split()[0]
-}
-
 function Invoke-GithubAPI {
     [CmdletBinding()]
     param (
@@ -67,176 +58,80 @@ function Invoke-GithubAPI {
     return $(Invoke-RestMethod @params)
 }
 
-function Copy-WixBinaries {
-    param(
-        [string] $Destination = $(Get-Location -PSProvider FileSystem).ProviderPath
-    )
-        
-    $params = @{
-        Uri         = $(Invoke-GithubAPI -RelativeUri 'repos/wixtoolset/wix3/releases'). `
-            Where({ $PSItem.tag_name.EndsWith('rtm') }, 'First', 1). `
-            assets. `
-            Where({ $PSItem.name.EndsWith('binaries.zip') }). `
-            browser_download_url
-        Destination = $Destination
-        Overwrite   = $true
-    }
-    Write-Information "Downloading WiX binaries"
-    Expand-WebArchive @params
-}
-
-function Get-ClojureTags {
+function Get-LatestRelease {
     [CmdletBinding()]
     param (
-        [Parameter()]
-        [switch]
-        $Latest
+        [string] $Repository
     )
-
-    $tags = $(Invoke-GithubAPI -Uri '/repos/clojure/brew-install/tags').ForEach('name').Where({ $PSItem -imatch '^\d.+' })
-
-    if ($Latest) {
-        return $tags[0]
-    }
-    else {
-        return $tags
-    }
-
+    
+    Invoke-GithubAPI -RelativeUri "repos/$Repository/releases/latest"
 }
 
-function Get-DepsTags {
-    [CmdletBinding()]
-    param (
-        [Parameter()]
-        [switch]
-        $Latest
-    )
-
-    $tags = $(Invoke-GithubAPI -Uri '/repos/borkdude/deps.clj/tags').ForEach('name').Where({ $PSItem -imatch '^v\d.+' })
-
-    if ($Latest) {
-        return $tags[0]
-    }
-    else {
-        return $tags
-    }
-}
-
-function Get-MsiTags {
-    [CmdletBinding()]
-    param (
-        [Parameter()]
-        [switch]
-        $Latest
-    )
-
-    $tags = $(Invoke-GithubAPI -Uri '/repos/casselc/clj-msi/tags').ForEach('name').Where({ $PSItem -imatch '^\d.+' })
-
-    if ($Latest) {
-        return $tags[0]
-    }
-    else {
-        return $tags
-    }
-}
-function Compare-LatestTags {
-    $msiVersion = Get-MsiTags -Latest
-    $cljVersion = Get-ClojureTags -Latest
-    $stableVersion = Get-ClojureVersion
-    $depsVersion = Get-DepsTags -Latest
-
-    return  [PSCustomObject]@{
-        MSI      = $msiVersion
-        Clojure  = $cljVersion
-        Deps     = $depsVersion
-        UpToDate = ($msiVersion -eq $cljVersion)
-        Prerelease = ($stableVersion -ne $cljVersion)
-    } 
-}
-
-function Build-ClojureMSI {
-    [CmdletBinding()]
-    param (
-        [string] $ClojureVersion = $(Get-ClojureTags -Latest),
-        [string] $DepsVersion = $(Get-DepsTags -Latest),
-        [switch] $Publish,
-        [switch] $Prerelease
-
-    )
-    if (-not $(Test-Path -Path wix_bin)) {
-        Copy-WixBinaries -Destination wix_bin
-    }
-
-    $packageVersion = $clojureVersion.Split('.', 2)[1]
-    $filename = "clojure-$clojureVersion.msi"
-
-    Copy-DepsRelease -VersionTag $DepsVersion -Destination files
-    Copy-ClojureTools -Version $ClojureVersion -Destination files 
-
-    .\wix_bin\candle.exe installers\clojure.wxs -nologo
-    .\wix_bin\light.exe -b files -b resources -ext WixUIExtension "-cultures:en-us" "-dClojureVersion=$clojureVersion" "-dPackageVersion=$packageVersion" clojure.wixobj -o $filename -spdb -dcl:high -nologo
-
-    if ($Publish) {
-        Publish-ClojureMSI -Path $filename -Tag $ClojureVersion -Prerelease:$Prerelease
-    }
-}
-
-function Publish-ClojureMSI {
+function Get-PackageVersion {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
-        [string] $Path,
-        [string] $Tag,
-        [switch] $Prerelease
+        [String]
+        $ClojureVersion,
+        [Parameter(Mandatory)]
+        $DepsRelease
     )
-    Write-Information "Creating new release with tag $Tag"
-    $release = Invoke-GithubAPI -Method Post -RelativeUri '/repos/casselc/clj-msi/releases' -Body @{tag_name = $Tag ; name = "Clojure $Tag"; body = "Automated build of Windows Installer package for Clojure version $Tag"; prerelease = $Prerelease.ToBool(); draft = $true }
-    $uploadUri = $release.upload_url -replace '\{.*\}', ''
-    $uploadUri += "?name=$(Split-Path -Path $Path -Leaf)"
 
-    Write-Information "Uploading $Path as asset"
-    return $(Invoke-GithubAPI -Method Post -RelativeUri $uploadUri -InFile $Path -ContentType 'application/x-msi').browser_download_url
+    $week_start = $DepsRelease.created_at.AddDays(-$DepsRelease.created_at.DayOfWeek.value__)
+    $week_start = Get-Date -Year $week_start.Year -Month $week_start.Month -Day $week_start.Day -Hour 0 -Minute 0 -Second 0 -Millisecond 0 -AsUTC
+    $mins = [int] ($DepsRelease.created_at - $week_start).TotalMinutes
+    $cal = [System.Globalization.CultureInfo]::InvariantCulture.Calendar
+    $week = $cal.GetWeekOfYear($DepsRelease.created_at, 'FirstDay', 'Sunday')
+    $year = $DepsRelease.created_at.Year - 2000
+    $patch = $ClojureVersion.Split('.')[-1]
+
+    "$year.$week.$mins.$patch"
 }
 
-function Copy-DepsRelease {
-    [CmdletBinding()]
-    param (
-        [Alias('Version')]
-        [string] $VersionTag = $(Get-DepsTags -Latest),
-        [string] $Destination = (Get-Location -PSProvider FileSystem).ProviderPath
-    )
-    $download_url = $(Invoke-GithubAPI -RelativeUri "/repos/borkdude/deps.clj/releases/tags/$VersionTag").assets.Where({ $PSItem.name.Contains('windows') }, 'First', 1).ForEach('browser_download_url')[0]
-    
-    Write-Information "Downloading deps.exe version $VersionTag"
-    Expand-WebArchive -Uri $download_url -Destination $Destination -Overwrite 
-}
 
-function Copy-ClojureTools {
-    param(
-        [string] $Version = $(Get-ClojureTags -Latest),
-        [string] $Destination = $(Get-Location -PSProvider FileSystem).ProviderPath
-    )
+$latest_deps = Get-LatestRelease -Repository 'borkdude/deps.clj'
+$latest_msi = Get-LatestRelease -Repository 'casselc/clj-msi'
 
-    $params = @{
-        Uri         = "https://download.clojure.org/install/clojure-tools-$Version.zip"
-        Destination = $Destination
-        Overwrite   = $true
+if (($latest_deps.tag_name -ne $latest_msi.tag_name) -and ($latest_msi.created_at -lt $latest_deps.created_at)) {
+    $tag = $latest_deps.tag_name
+
+    Write-Host "Building new MSI for $tag"
+
+    if (-not $(Test-Path -Path wix_bin)) {
+        $latest_wix = Get-LatestRelease -Repository 'wixtoolset/wix3'
+        $wix_url = $latest_wix.assets.Where({ $PSItem.name.EndsWith('binaries.zip') }, 'First', 1).browser_download_url
+        Write-Information "Downloading WiX binaries"
+        Expand-WebArchive -Uri $wix_url -Destination wix_bin 
     }
-    Write-Information "Downloading ClojureTools version $Version"
-    Expand-WebArchive @params
-    Move-Item -Path "$Destination\ClojureTools\*" -Destination $Destination -Force
-    Remove-Item -Path "$Destination\ClojureTools"
-}
 
-function Update-ClojureMSI {
-    $status = Compare-LatestTags
-    if (-not $status.UpToDate) {
-        $tags = @(Get-MsiTags).Where({$PSItem -eq $status.Clojure}, 'First', 1)
-        if ($tags.Count -eq 0) {
-            Build-ClojureMSI -Publish -Prerelease:$status.Prerelease
-        } else {
-            Write-Information "Found matching pre-existing tag"
-        }
+    $deps_url = $latest_deps.assets.Where({ $PSItem.name.Contains('windows') -and $PSItem.content_type.Contains('zip') }, 'First', 1).browser_download_url
+    Write-Information "Downloading deps.exe"
+    Expand-WebArchive -Uri $deps_url -Destination files -Overwrite
+
+    $clojure_version, $clojure_hash, $_line = $(Invoke-RestMethod -Uri 'https://download.clojure.org/install/stable.properties').Split()
+    $clojure_url = "https://download.clojure.org/install/clojure-tools-$clojure_version.zip"
+    Write-Information "Downloading ClojureTools"
+    Expand-WebArchive -Uri $clojure_url -Destination files -Overwrite
+    Move-Item -Path files\ClojureTools\* -Destination files -Force
+    Remove-Item -Path files\ClojureTools
+
+    $package_version = Get-PackageVersion -DepsRelease $latest_deps -ClojureVersion $clojure_version
+    $filename = "clojure-$clojure_version.msi"
+
+    .\wix_bin\candle.exe installers\clojure.wxs -nologo
+    .\wix_bin\light.exe -b files -b resources -ext WixUIExtension "-cultures:en-us" "-dClojureVersion=$clojure_version" "-dPackageVersion=$package_version" clojure.wixobj -o $filename -spdb -dcl:high -nologo
+
+    if ($env:GITHUB_REPOSITORY) {
+        Write-Information "Creating new release with tag $tag"
+        $body = "Automated build of Windows Installer package for Clojure. This release includes the following components:`n- [deps.clj $tag]($($latest_deps.url))`n - [Clojure Tools $clojure_version]($clojure_url)"
+
+        $release = Invoke-GithubAPI -Method Post -RelativeUri "/repos/$env:PUBLISH_REPO/releases" -Body @{tag_name = $Tag ; name = "Clojure $clojure_version"; body = $body; prerelease = $false; draft = $true }
+        $uploadUri = $release.upload_url -replace '\{.*\}', ''
+        $uploadUri += "?name=$filename"
+
+        Write-Information "Uploading $filename as asset"
+        $(Invoke-GithubAPI -Method Post -RelativeUri $uploadUri -InFile $filename -ContentType 'application/x-msi').browser_download_url
     }
-    Write-Information "Most recent version has already been published"
+} else {
+    Write-Information "Up to date, nothing to do."
 }
