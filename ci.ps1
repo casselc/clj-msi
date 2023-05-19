@@ -125,7 +125,7 @@ if (($latest_deps.tag_name -ne $latest_msi.tag_name) -and ($latest_msi.created_a
         Write-Information "Creating new release with tag $tag"
         $body = "Automated build of Windows Installer package for Clojure. This release includes the following components:`n- [deps.clj $tag]($($latest_deps.url))`n - [Clojure Tools $clojure_version]($clojure_url)"
 
-        $release = Invoke-GithubAPI -Method Post -RelativeUri "/repos/$env:PUBLISH_REPO/releases" -Body @{tag_name = $Tag ; name = "Clojure $clojure_version"; body = $body; prerelease = $false; draft = $true }
+        $release = Invoke-GithubAPI -Method Post -RelativeUri "/repos/$env:GITHUB_REPOSITORY/releases" -Body @{tag_name = $Tag ; name = "Clojure $clojure_version"; body = $body; prerelease = $false; draft = $true }
         $uploadUri = $release.upload_url -replace '\{.*\}', ''
         $uploadUri += "?name=$filename"
 
