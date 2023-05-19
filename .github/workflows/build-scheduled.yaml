@@ -1,0 +1,18 @@
+name: Publish on new deps
+on:
+  schedule:
+    - cron: "0 * * * *"
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3         
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Package latest MSI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          .\ci.ps1
+          

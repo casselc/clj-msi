@@ -1,8 +1,5 @@
-name: Build and Publish Clojure MSI
-on:
-  workflow_dispatch:
-  schedule:
-    - cron: "0 * * * *"
+name: Publish manually
+on: workflow_dispatch
 jobs:
   build:
     runs-on: windows-latest
@@ -13,6 +10,7 @@ jobs:
       - name: Package latest MSI
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE_MSI: 1
         shell: pwsh
         run: |
           .\ci.ps1

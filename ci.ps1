@@ -92,7 +92,7 @@ function Get-PackageVersion {
 $latest_deps = Get-LatestRelease -Repository 'borkdude/deps.clj'
 $latest_msi = Get-LatestRelease -Repository 'casselc/clj-msi'
 
-if (($latest_deps.tag_name -ne $latest_msi.tag_name) -and ($latest_msi.created_at -lt $latest_deps.created_at)) {
+if ($env:FORCE_MSI -or (($latest_deps.tag_name -ne $latest_msi.tag_name) -and ($latest_msi.created_at -lt $latest_deps.created_at))) {
     $tag = $latest_deps.tag_name
 
     Write-Host "Building new MSI for $tag"
