@@ -105,7 +105,7 @@ If you don't have an existing Java installation, we recommend Adoptium Temurin 1
 
             <InstallUISequence>
                 <Show Dialog="JavaWarningDlg" After="ExecuteAction">
-                    <![CDATA[JAVAINSTALLED <> "Yes"]]>
+                    <![CDATA[JAVAINSTALLED = "No"]]>
                 </Show>
                 <Show Dialog="PSWarningDlg" After="ExecuteAction">
                     <![CDATA[PSMODULEINSTALLED <> "No"]]>

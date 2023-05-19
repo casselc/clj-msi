@@ -1,12 +1,26 @@
 Option Explicit
 
-Dim oEnv, oFSO, oShell, oWMI
+Const msiMessageTypeInfo = &H04000000
+
+Dim oEnv, oFSO, oShell, oWMI, OMsg
+
+Sub Log(sMsg)
+    oMsg.StringData(1) = sMsg
+    Session.Message msiMessageTypeInfo, oMsg
+End Sub
+
+Function Exists(ByVal sPath)
+    sPath = Replace(sPath,"\", "\\")
+    Exists = (oWMI.ExecQuery("SELECT * FROM CIM_DataFile WHERE Name = '" & sPath & "'").Count = 1)
+End Function
 
 Sub Run_All
     Set oFSO = CreateObject("Scripting.FileSystemObject")
     Set oShell = CreateObject("WScript.Shell")
     Set oEnv = oShell.Environment("PROCESS")
     Set oWMI = GetObject("WinMgmts:root/cimv2")
+    Set oMsg = Installer.CreateRecord(1)
+    oMsg.StringData(0) = "Log: [1]"
 
     Find_Java
     Find_PSModule
@@ -17,7 +31,7 @@ Sub Find_PSModule
     Dim sDir
 
     For Each sDir in Split(oEnv("PSModulePath"), ";") 
-        If oFSO.FileExists(oFSO.BuildPath(Trim(sDir), "ClojureTools\ClojureTools.psd1")) Then 
+        If Exists(oFSO.BuildPath(Trim(sDir), "ClojureTools\ClojureTools.psd1")) Then 
             Session.Property("PSMODULEINSTALLED") = sDir
             Exit Sub
         End If
@@ -34,15 +48,19 @@ Sub Find_Terminals
 End Sub
 
 Sub Find_Java
-    Dim sDir
-    
-    If oFSO.FileExists(oFSO.BuildPath(Trim(oEnv("JAVA_HOME")), "bin\java.exe")) Then 
-        Session.Property("JAVAINSTALLED") = "Yes"
+    Dim sPath, bExists, oDir, oFile
+
+    sPath = oFSO.BuildPath(Trim(oEnv("JAVA_HOME")), "bin\java.exe")
+    If Exists(sPath) Then 
+        Log "Found Java at " & sPath
+        Session.Property("JAVAINSTALLED") = sPath
         Exit Sub
     Else 
-        For Each sDir in Split(oEnv("PATH"), ";") 
-            If oFSO.FileExists(oFSO.BuildPath(Trim(sDir), "java.exe")) Then 
-                Session.Property("JAVAINSTALLED") = "Yes"
+        For Each sPath in Split(oEnv("PATH"), ";") 
+            sPath = oFSO.BuildPath(Trim(sPath), "java.exe")
+            If Exists(sPath) Then 
+                Log "Found Java at " & sPath
+                Session.Property("JAVAINSTALLED") = sPath
                 Exit Sub
             End If
         Next
