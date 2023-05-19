@@ -108,7 +108,8 @@ if ($env:FORCE_MSI -or (($latest_deps.tag_name -ne $latest_msi.tag_name) -and ($
     Write-Information "Downloading deps.exe"
     Expand-WebArchive -Uri $deps_url -Destination files -Overwrite
 
-    $clojure_version, $clojure_hash, $_line = $(Invoke-RestMethod -Uri 'https://download.clojure.org/install/stable.properties').Split()
+    $clojure_version = [regex]::Matches($tag, 'v(?<version>(\d+\.?)+)')[0].Groups['version'].Value
+    # $clojure_version, $clojure_hash, $_line = $(Invoke-RestMethod -Uri 'https://download.clojure.org/install/stable.properties').Split()
     $clojure_url = "https://download.clojure.org/install/clojure-tools-$clojure_version.zip"
     Write-Information "Downloading ClojureTools"
     Expand-WebArchive -Uri $clojure_url -Destination files -Overwrite
