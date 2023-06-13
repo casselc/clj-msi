@@ -2,36 +2,25 @@
 
 This repo contains a script to build a proof-of-concept MSI package for installing Clojure. It downloads the latest version of [deps.exe](https://github.com/borkdude/deps.clj), [ClojureTools](https://github.com/clojure/brew-install), and the [WiX toolset](https://wixtoolset.org/releases/) automatically and creates a combined installer file. The installer supports per-user or per-machine (requires elevation) installation.
 
-## How to build the MSI locally
+## How to install
 
-Clone this repository, open the repository root in a PowerShell terminal and run `.\build-clojure-msi.ps1`
+Download the latest MSI from the [releases](https://github.com/casselc/clj-msi/releases/latest). Depending on your browser you may see warnings about the installer being an infrequently downloaded file - you will need to select the option to keep the file/continue downloading.
 
-The compiled package will be located in the current directory as `clojure-<currentclojureversion>.msi`
+![download warning](docs/download_warning.png)
+![another download warning](docs/download_warning_2.png)
 
-You can use the following additional options:
-```
-.\build-clojure-msi.ps1 -DownloadDirectory downloadpath` 
-```
-Set the location used for downloading Clojure binaries to build the installer. Default: `files` sub-folder of the current directory
+After downloading, double-click the MSI file or run `msiexec.exe /i clojure-x.x.xx.msi` from a command prompt or PowerShell session. In PowerShell, be careful of the shell automatically changing the path from `clojure-x.x.xxx.msi` to `.\clojure-x.x.xxx.msi`, the latter format will cause `msiexec` to report an error.
 
-```
-.\build-clojure-msi.ps1 -WixDirectory wixpath` 
-```
-Set the location used for downloading WiX binaries to build the installer. Default: `wix_bin` sub-folder of the current directory
+### Advanced options
 
-```
-.\build-clojure-msi.ps1 -OnlyBuild` 
-```
-Rebuild the MSI package without downloading any files.
-
-
-
-## How to install the MSI 
-
-Double-click the resulting MSI file, or run `msiexec.exe /i clojure-x.x.xx.msi` from a command prompt or PowerShell session, or `msiexec.exe /i clojure-x.x.xx.msi /qn` for a silent installation. In PowerShell, be careful of the shell automatically changing the path from `clojure-x.x.xxx.msi` to `.\clojure-x.x.xxx.msi`, the latter format will cause `msiexec` to throw an error.
+You can use `msiexec.exe /i clojure-x.x.xx.msi /qn` for a silent installation.
 
 Currently the installer defaults to `%LOCALAPPDATA%\Apps\clojure` or `%ProgramFiles%\clojure` depending on whether you select a per-user or per-machine installation, and the installation directory can be changed by using the Advanced option during installation, or at the command line by settingsthe `APPLICATIONFOLDER` property, e.g. `msiexec.exe /i clojure-x.x.xx.msi /qn APPLICATIONFOLDER=C:\somewhere\else\clojure`
 
 ## How to uninstall
 
 Use Add/Remove Programs, or `msiexec.exe /x clojure-x.x.xxx.msi`
+
+## How to build the MSI
+
+See the [build docs](docs/BUILDING.md).
