@@ -1,6 +1,8 @@
 # Clojure Installer
 
-This repo contains a script to build a proof-of-concept MSI package for installing Clojure. It downloads the latest version of [deps.exe](https://github.com/borkdude/deps.clj), [ClojureTools](https://github.com/clojure/brew-install), and the [WiX toolset](https://wixtoolset.org/releases/) automatically and creates a combined installer file. The installer supports per-user or per-machine (requires elevation) installation.
+This repo contains a script to build a proof-of-concept MSI package for installing Clojure. It downloads the Windows binaries for the latest version of [deps.clj](https://github.com/borkdude/deps.clj), [ClojureTools](https://github.com/clojure/brew-install), and the [WiX toolset](https://wixtoolset.org/releases/) automatically and creates a combined installer file. The installer supports per-user or per-machine (requires elevation) installation.
+
+New releases should appear automatically shortly after the release of [deps.clj](https://github.com/borkdude/deps.clj) versions.
 
 ## How to install
 
